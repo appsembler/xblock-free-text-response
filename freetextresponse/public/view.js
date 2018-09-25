@@ -162,7 +162,7 @@ function FreeTextResponseView(runtime, element) {
                     state: 'end'
                 });
             },
-            error: function buttonSubmitOnError() {
+            error: function xblockLoadOnError() {
                 runtime.notify('error', {});
             }
         });
