@@ -67,6 +67,7 @@ function FreeTextResponseView(runtime, element) {
                 buttonSubmit.text(buttonSubmit[0].dataset.value);
                 userAlertMessage.text(response.user_alert);
                 buttonSave.addClass(response.nodisplay_class);
+                setClassForTextAreaParent(response.indicator_class);
 
                 display_responses_if_answered(response);
 
@@ -97,7 +98,6 @@ function FreeTextResponseView(runtime, element) {
     }
 
     function display_responses_if_answered(response) {
-        setClassForTextAreaParent(response.indicator_class);
         if (!response.user_alert && response.display_other_responses) {
             var responseHTML = get_student_responses_html(response.other_responses);
             if (responseHTML) {
