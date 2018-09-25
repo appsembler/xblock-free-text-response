@@ -67,14 +67,8 @@ function FreeTextResponseView(runtime, element) {
                 buttonSubmit.text(buttonSubmit[0].dataset.value);
                 userAlertMessage.text(response.user_alert);
                 buttonSave.addClass(response.nodisplay_class);
-                setClassForTextAreaParent(response.indicator_class);
-                if (!response.user_alert && response.display_other_responses) {
-                    var responseHTML = get_student_responses_html(response.other_responses);
-                    if (responseHTML) {
-                        responseList.html(responseHTML);
-                    }
-                    $element.find('.responses-box').show();
-                }
+
+                display_responses_if_answered(response);
 
                 $xblocksContainer.data(cachedAnswerId, $element.find('.student_answer').val());
                 $xblocksContainer.data(problemProgressId, response.problem_progress);
@@ -100,6 +94,17 @@ function FreeTextResponseView(runtime, element) {
             html += '<li class="other-student-responses">' + item.answer + '</li>';
         });
         return html;
+    }
+
+    function display_responses_if_answered(response) {
+        setClassForTextAreaParent(response.indicator_class);
+        if (!response.user_alert && response.display_other_responses) {
+            var responseHTML = get_student_responses_html(response.other_responses);
+            if (responseHTML) {
+                responseList.html(responseHTML);
+            }
+            $element.find('.responses-box').show();
+        }
     }
 
     buttonSave.on('click', function () {
@@ -142,5 +147,25 @@ function FreeTextResponseView(runtime, element) {
         submissionReceivedMessage.text('');
         userAlertMessage.text('');
         setClassForTextAreaParent('unanswered');
+    });
+
+    $xblocksContainer.ready(function() {
+        $.ajax(url, {
+            type: 'POST',
+            data: JSON.stringify({
+                'student_answer': $element.find('.student_answer').val()
+            }),
+            success: function xblockLoadOnSuccess(response) {
+                display_responses_if_answered(response);
+
+                runtime.notify('load', {
+                    state: 'end'
+                });
+            },
+            error: function buttonSubmitOnError() {
+                runtime.notify('error', {});
+            }
+        });
+        return false;
     });
 }
