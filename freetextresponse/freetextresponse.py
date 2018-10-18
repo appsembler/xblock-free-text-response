@@ -279,6 +279,13 @@ class FreeTextResponse(
             (Fragment): The HTML Fragment for this XBlock, which determines the
             general frame of the FreeTextResponse Question.
         """
+        student_id = self.get_student_id()
+        display_other_responses = self.display_other_student_responses
+        student_answer = self.student_answer
+        if student_answer and display_other_responses:
+            other_responses = get_other_answers(student_id)
+        else:
+            other_responses = []
 
         self.runtime.service(self, 'i18n')
         context.update(
@@ -288,13 +295,13 @@ class FreeTextResponse(
                 'nodisplay_class': self._get_nodisplay_class(),
                 'problem_progress': self._get_problem_progress(),
                 'prompt': self.prompt,
-                'student_answer': self.student_answer,
+                'student_answer': student_answer,
                 'is_past_due': self.is_past_due(),
                 'used_attempts_feedback': self._get_used_attempts_feedback(),
                 'visibility_class': self._get_indicator_visibility_class(),
                 'word_count_message': self._get_word_count_message(),
-                'display_other_responses': self.display_other_student_responses,
-                'other_responses': [],
+                'display_other_responses': display_other_responses,
+                'other_responses': other_responses,
             }
         )
         template = get_template('freetextresponse_view.html')

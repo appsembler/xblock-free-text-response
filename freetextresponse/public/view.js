@@ -148,24 +148,4 @@ function FreeTextResponseView(runtime, element) {
         userAlertMessage.text('');
         setClassForTextAreaParent('unanswered');
     });
-
-    $xblocksContainer.ready(function() {
-        $.ajax(url, {
-            type: 'POST',
-            data: JSON.stringify({
-                'student_answer': $element.find('.student_answer').val()
-            }),
-            success: function xblockLoadOnSuccess(response) {
-                display_responses_if_answered(response);
-
-                runtime.notify('load', {
-                    state: 'end'
-                });
-            },
-            error: function xblockLoadOnError() {
-                runtime.notify('error', {});
-            }
-        });
-        return false;
-    });
 }
