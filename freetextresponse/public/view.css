@@ -109,6 +109,9 @@
   background: #fbfbfb;
   border: 1px solid #ddd;
 }
+.freetextresponse .responses-box.hidden {
+  display: none;
+}
 
 .freetextresponse .responses-title {
   margin-left: 15px;

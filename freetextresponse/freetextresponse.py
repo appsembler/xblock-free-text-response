@@ -286,6 +286,10 @@ class FreeTextResponse(
             other_responses = self.get_other_answers(student_id)
         else:
             other_responses = []
+        if other_responses:
+            hide_responses_class = ''
+        else:
+            hide_responses_class = 'hidden'
 
         self.runtime.service(self, 'i18n')
         context.update(
@@ -301,6 +305,7 @@ class FreeTextResponse(
                 'visibility_class': self._get_indicator_visibility_class(),
                 'word_count_message': self._get_word_count_message(),
                 'display_other_responses': display_other_responses,
+                'hide_responses_class': hide_responses_class,
                 'other_responses': other_responses,
             }
         )
