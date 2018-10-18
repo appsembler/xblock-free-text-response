@@ -103,7 +103,7 @@ function FreeTextResponseView(runtime, element) {
             if (responseHTML) {
                 responseList.html(responseHTML);
             }
-            $element.find('.responses-box').show();
+            $element.find('.responses-box').removeClass('hidden');
         }
     }
 
