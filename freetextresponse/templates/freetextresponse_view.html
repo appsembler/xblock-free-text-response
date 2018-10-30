@@ -30,20 +30,24 @@
     </div>
     <div class="capa_alert user_alert">{{ user_alert }}</div>
     {% if display_other_responses %}
-        <div class="responses-box {{ hide_responses_class }}">
-            <button class="hide-button">
-                <span class="hide">Hide</span>
-                <span class="show">Show</span>
-                <span class="sr">peer responses</span>
-            </button>
-            <p class="responses-title">Submissions by others</p>
-            <ul class="response-list">
-                {% for response in other_responses %}
-                    <li class="other-student-responses">{{ response.answer }}</li>
-                {% empty %}
-                    <li class="no-response">No responses to show at this time</li>
-                {% endfor %}
-            </ul>
-        </div>
+        {% if student_answer %}
+            <div class="responses-box">
+        {% else %}
+            <div class="responses-box hidden">
+        {% endif %}
+                <button class="hide-button">
+                    <span class="hide">Hide</span>
+                    <span class="show">Show</span>
+                    <span class="sr">peer responses</span>
+                </button>
+                <p class="responses-title">Submissions by others</p>
+                <ul class="response-list">
+                    {% for response in other_responses %}
+                        <li class="other-student-responses">{{ response.answer }}</li>
+                    {% empty %}
+                        <li class="no-response">No responses to show at this time</li>
+                    {% endfor %}
+                </ul>
+            </div>
     {% endif %}
 </div>
