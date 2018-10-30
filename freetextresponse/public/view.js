@@ -86,8 +86,23 @@ function FreeTextResponseView(runtime, element) {
         return false;
     });
 
+    function get_student_responses_html(responses) {
+        /*
+        Convert list of responses to a html string to add to the page
+        */
+        var html = '';
+        responses.forEach(function(item) {
+            html += '<li class="other-student-responses">' + item.answer + '</li>';
+        });
+        return html;
+    }
+
     function display_responses_if_answered(response) {
         if (!response.user_alert && response.display_other_responses) {
+            var responseHTML = get_student_responses_html(response.other_responses);
+            if (responseHTML) {
+                responseList.html(responseHTML);
+            }
             $element.find('.responses-box').removeClass('hidden');
         }
     }
