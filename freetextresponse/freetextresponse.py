@@ -282,10 +282,9 @@ class FreeTextResponse(
         student_id = self.get_student_id()
         display_other_responses = self.display_other_student_responses
         student_answer = self.student_answer
+        other_responses = []
         if student_answer and display_other_responses:
             other_responses = self.get_other_answers(student_id)
-        else:
-            other_responses = []
 
         self.runtime.service(self, 'i18n')
         context.update(
