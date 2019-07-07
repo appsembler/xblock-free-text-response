@@ -4,9 +4,6 @@ This is the core logic for the Free-text Response XBlock
 from enum import Enum
 from django.db import IntegrityError
 from django.template.context import Context
-from django.utils.translation import ungettext
-from django.utils.translation import ugettext_lazy as _
-from django.utils.translation import ugettext
 from xblock.core import XBlock
 from xblock.fields import Boolean
 from xblock.fields import Float
@@ -19,6 +16,8 @@ from xblock.validation import ValidationMessage
 from xblockutils.resources import ResourceLoader
 from xblockutils.studio_editable import StudioEditableXBlockMixin
 from .mixins import EnforceDueDates, MissingDataFetcherMixin
+
+from .utils import _
 
 
 MAX_RESPONSES = 3
@@ -175,7 +174,7 @@ class FreeTextResponse(
             'This is the prompt students will see when '
             'asked to enter their response'
         ),
-        default='Please enter your response within this text area',
+        default=_('Please enter your response within this text area'),
         scope=Scope.settings,
         multiline_editor=True,
     )
@@ -240,6 +239,12 @@ class FreeTextResponse(
         'display_other_student_responses',
         'saved_message',
     )
+
+    def ungettext(self, *args, **kwargs):
+        """
+        XBlock aware version of `ungettext`.
+        """
+        return self.runtime.service(self, 'i18n').ungettext(*args, **kwargs)
 
     def build_fragment(
             self,
@@ -324,15 +329,14 @@ class FreeTextResponse(
         """
         return self.weight
 
-    @classmethod
-    def _generate_validation_message(cls, msg):
+    def _generate_validation_message(self, msg):
         """
         Helper method to generate a ValidationMessage from
         the supplied string
         """
         result = ValidationMessage(
             ValidationMessage.ERROR,
-            ugettext(unicode(msg))
+            self.ugettext(unicode(msg))  # pylint: disable=undefined-variable
         )
         return result
 
@@ -341,27 +345,27 @@ class FreeTextResponse(
         Validates settings entered by the instructor.
         """
         if data.weight < 0:
-            msg = FreeTextResponse._generate_validation_message(
+            msg = self._generate_validation_message(
                 'Weight Attempts cannot be negative'
             )
             validation.add(msg)
         if data.max_attempts < 0:
-            msg = FreeTextResponse._generate_validation_message(
+            msg = self._generate_validation_message(
                 'Maximum Attempts cannot be negative'
             )
             validation.add(msg)
         if data.min_word_count < 1:
-            msg = FreeTextResponse._generate_validation_message(
+            msg = self._generate_validation_message(
                 'Minimum Word Count cannot be less than 1'
             )
             validation.add(msg)
         if data.min_word_count > data.max_word_count:
-            msg = FreeTextResponse._generate_validation_message(
+            msg = self._generate_validation_message(
                 'Minimum Word Count cannot be greater than Max Word Count'
             )
             validation.add(msg)
         if not data.submitted_message:
-            msg = FreeTextResponse._generate_validation_message(
+            msg = self._generate_validation_message(
                 'Submission Received Message cannot be blank'
             )
             validation.add(msg)
@@ -380,7 +384,7 @@ class FreeTextResponse(
         """
         Returns the word count message
         """
-        result = ungettext(
+        result = self.ungettext(
             "Your response must be "
             "between {min} and {max} word.",
             "Your response must be "
@@ -402,7 +406,7 @@ class FreeTextResponse(
                 (not self._word_count_valid())
         ):
             word_count_message = self._get_word_count_message()
-            result = ugettext(
+            result = self.ugettext(
                 "Invalid Word Count. {word_count_message}"
             ).format(
                 word_count_message=word_count_message,
@@ -427,11 +431,7 @@ class FreeTextResponse(
         word count of the user's answer is valid
         """
         word_count = len(self.student_answer.split())
-        result = (
-            word_count <= self.max_word_count and
-            word_count >= self.min_word_count
-        )
-        return result
+        return self.max_word_count >= word_count >= self.min_word_count
 
     @classmethod
     def _is_at_least_one_phrase_present(cls, phrases, answer):
@@ -455,7 +455,7 @@ class FreeTextResponse(
             result = ''
         elif self.score == 0.0:
             result = "({})".format(
-                ungettext(
+                self.ungettext(
                     "{weight} point possible",
                     "{weight} points possible",
                     self.weight,
@@ -468,7 +468,7 @@ class FreeTextResponse(
             # No trailing zero and no scientific notation
             score_string = ('%.15f' % scaled_score).rstrip('0').rstrip('.')
             result = "({})".format(
-                ungettext(
+                self.ungettext(
                     "{score_string}/{weight} point",
                     "{score_string}/{weight} points",
                     self.weight,
@@ -532,7 +532,7 @@ class FreeTextResponse(
         """
         result = ''
         if self.max_attempts > 0:
-            result = ungettext(
+            result = self.ungettext(
                 'You have used {count_attempts} of {max_attempts} submission',
                 'You have used {count_attempts} of {max_attempts} submissions',
                 self.max_attempts,

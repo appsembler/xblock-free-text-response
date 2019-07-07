@@ -22,7 +22,7 @@ from .freetextresponse import FreeTextResponse
 from .utils import _
 
 
-class TestData(object):
+class TestData(object):  # pylint: disable=R
     # pylint: disable=too-few-public-methods
     """
     Module helper for validate_field_data
@@ -34,7 +34,7 @@ class TestData(object):
     submitted_message = None
 
 
-class TestRequest(object):
+class TestRequest(object):  # pylint: disable=R
     # pylint: disable=too-few-public-methods
     """
     Module helper for @json_handler
@@ -42,6 +42,25 @@ class TestRequest(object):
     method = None
     body = None
     success = None
+
+
+class DummyService(object):  # pylint: disable=R
+    # pylint: disable=no-self-use
+    """
+    Dummy service (i18n and otherwise) for the XBlock.
+    """
+    _catalog = {}
+
+    def ugettext(self, message):
+        """Dummy `ugettext` replacement."""
+        return message
+
+    def ungettext(self, text_singular, text_plural, number):
+        """Dummy `ungettext` replacement."""
+        if number == 1:
+            return text_singular
+
+        return text_plural
 
 
 @ddt.ddt
@@ -61,7 +80,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
             course_id=course_id,
             service=Mock(
                 # Is there a cleaner mock to the `i18n` service?
-                return_value=Mock(_catalog={}),
+                return_value=DummyService(),
             ),
         )
         scope_ids = Mock()
@@ -89,14 +108,14 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
     def test_generate_validation_message(self):
         # pylint: disable=invalid-name, protected-access
         """
-        Checks classmethod _generate_validation_message
+        Check _generate_validation_message method.
         """
         msg = u'weight attempts cannot be negative'
         result = ValidationMessage(
             ValidationMessage.ERROR,
             _(msg)
         )
-        test_result = FreeTextResponse._generate_validation_message(msg)
+        test_result = self.xblock._generate_validation_message(msg)
         self.assertEqual(
             type(result),
             type(test_result),

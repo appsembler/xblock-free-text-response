@@ -47,7 +47,7 @@ setup(
     ],
     entry_points={
         'xblock.v1': [
-            'freetextresponse = freetextresponse:FreeTextResponse',
+            'freetextresponse = freetextresponse.freetextresponse:FreeTextResponse',
         ],
     },
     package_dir={
@@ -57,6 +57,7 @@ setup(
         "freetextresponse": [
             'public/*',
             'templates/*',
+            'translations/*',
         ],
     },
     classifiers=[

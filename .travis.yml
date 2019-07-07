@@ -20,5 +20,6 @@ branches:
 env:
     - TOXENV=py27-dj18
     - TOXENV=coveralls
-    - TOXENV=pep8
+    - TOXENV=pycodestyle
     - TOXENV=pylint
+    - TOXENV=i18n

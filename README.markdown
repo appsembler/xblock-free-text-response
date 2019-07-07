@@ -27,3 +27,34 @@ according to the parameters above.
   e.g. "freetextresponse"
 
 Now, when you create a component "Free-text Response" should appear in the Advanced Component List.
+
+
+## Working with Translations
+
+For information about working with translations, see the [Internationalization Support](http://edx.readthedocs.io/projects/xblock-tutorial/en/latest/edx_platform/edx_lms.html#internationalization-support) section of the [Open edX XBlock Tutorial](https://xblock-tutorial.readthedocs.io/en/latest/).
+
+### Working with Transifex
+Prepare your environment:
+
+```
+$ mkvirtualenv ftr-xblock
+$ make requirements
+```
+
+Also ensure that the [Transifex client has the proper authentication](https://docs.transifex.com/client/init) 
+in the `~/.transifexrc` file.
+
+Push new strings to Transifex:
+```
+$ make push_translations
+```
+
+To get the latest translations from Transifex:
+```
+$ make pull_translations
+```
+
+For testing purposes it's faster to avoid Transifex and work on dummy Esperanto translations:
+```
+$ make build_dummy_translations
+``` 
