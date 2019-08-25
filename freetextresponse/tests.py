@@ -11,9 +11,10 @@ from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 from xblock.field_data import DictFieldData
 from xblock.validation import ValidationMessage
+from xblockutils.resources import ResourceLoader
 
 from django.db import IntegrityError
-from django.template.loader import get_template
+from django.template.context import Context
 
 from .freetextresponse import Credit
 from .freetextresponse import FreeTextResponse
@@ -21,7 +22,7 @@ from .freetextresponse import FreeTextResponse
 from .utils import _
 
 
-class TestData(object):
+class TestData(object):  # pylint: disable=R
     # pylint: disable=too-few-public-methods
     """
     Module helper for validate_field_data
@@ -33,7 +34,7 @@ class TestData(object):
     submitted_message = None
 
 
-class TestRequest(object):
+class TestRequest(object):  # pylint: disable=R
     # pylint: disable=too-few-public-methods
     """
     Module helper for @json_handler
@@ -41,6 +42,25 @@ class TestRequest(object):
     method = None
     body = None
     success = None
+
+
+class DummyService(object):  # pylint: disable=R
+    # pylint: disable=no-self-use
+    """
+    Dummy service (i18n and otherwise) for the XBlock.
+    """
+    _catalog = {}
+
+    def ugettext(self, message):
+        """Dummy `ugettext` replacement."""
+        return message
+
+    def ungettext(self, text_singular, text_plural, number):
+        """Dummy `ungettext` replacement."""
+        if number == 1:
+            return text_singular
+
+        return text_plural
 
 
 @ddt.ddt
@@ -56,7 +76,13 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         Helper method that creates a Free-text Response XBlock
         """
         course_id = SlashSeparatedCourseKey('foo', 'bar', 'baz')
-        runtime = Mock(course_id=course_id)
+        runtime = Mock(
+            course_id=course_id,
+            service=Mock(
+                # Is there a cleaner mock to the `i18n` service?
+                return_value=DummyService(),
+            ),
+        )
         scope_ids = Mock()
         field_data = DictFieldData(kw)
         xblock = FreeTextResponse(runtime, field_data, scope_ids)
@@ -76,25 +102,25 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         result_title = 'Free-text Response XBlock'
         basic_scenario = "<freetextresponse />"
         test_result = self.xblock.workbench_scenarios()
-        self.assertEquals(result_title, test_result[0][0])
+        self.assertEqual(result_title, test_result[0][0])
         self.assertIn(basic_scenario, test_result[0][1])
 
     def test_generate_validation_message(self):
         # pylint: disable=invalid-name, protected-access
         """
-        Checks classmethod _generate_validation_message
+        Check _generate_validation_message method.
         """
         msg = u'weight attempts cannot be negative'
         result = ValidationMessage(
             ValidationMessage.ERROR,
             _(msg)
         )
-        test_result = FreeTextResponse._generate_validation_message(msg)
-        self.assertEquals(
+        test_result = self.xblock._generate_validation_message(msg)
+        self.assertEqual(
             type(result),
             type(test_result),
         )
-        self.assertEquals(
+        self.assertEqual(
             result.text,
             test_result.text,
         )
@@ -115,8 +141,8 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         self.xblock.validate_field_data(validation, test_data)
         validation_list = list(validation)
         # Only one validation error should be in set
-        self.assertEquals(1, len(validation_list))
-        self.assertEquals(
+        self.assertEqual(1, len(validation_list))
+        self.assertEqual(
             test_dict['result'],
             validation_list[0].text,
         )
@@ -125,26 +151,26 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         """
         Checks that instance variables are initialized correctly
         """
-        self.assertEquals('Free-text Response', self.xblock.display_name)
-        self.assertEquals(
+        self.assertEqual('Free-text Response', self.xblock.display_name)
+        self.assertEqual(
             'Please enter your response within this text area',
             self.xblock.prompt,
         )
-        self.assertEquals(0.0, self.xblock.score)
-        self.assertEquals(0, self.xblock.max_attempts)
+        self.assertEqual(0.0, self.xblock.score)
+        self.assertEqual(0, self.xblock.max_attempts)
         self.assertTrue(self.xblock.display_correctness)
-        self.assertEquals(1, self.xblock.min_word_count)
-        self.assertEquals(10000, self.xblock.max_word_count)
-        self.assertEquals(
+        self.assertEqual(1, self.xblock.min_word_count)
+        self.assertEqual(10000, self.xblock.max_word_count)
+        self.assertEqual(
             [],
             self.xblock.fullcredit_keyphrases,
         )
-        self.assertEquals(
+        self.assertEqual(
             [],
             self.xblock.halfcredit_keyphrases,
         )
-        self.assertEquals('', self.xblock.student_answer)
-        self.assertEquals(0, self.xblock.count_attempts)
+        self.assertEqual('', self.xblock.student_answer)
+        self.assertEqual(0, self.xblock.count_attempts)
 
     # Default Views
     def test_student_view(self):
@@ -182,10 +208,13 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         context = {
             'prompt': studio_settings_prompt,
         }
-        template = get_template('freetextresponse_view.html')
+        loader = ResourceLoader('freetextresponse')
+        template = loader.render_django_template(
+            'templates/freetextresponse_view.html',
+            context=Context(context),
+        )
         fragment = self.xblock.build_fragment(
             template,
-            context,
             initialize_js_func='FreeTextResponseView',
             additional_css=[],
             additional_js=[],
@@ -198,7 +227,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         Should return the weight
         """
         self.xblock.weight = 4
-        self.assertEquals(self.xblock.weight, self.xblock.max_score())
+        self.assertEqual(self.xblock.weight, self.xblock.max_score())
 
     def test_studio_view(self):
         """
@@ -242,7 +271,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         self.xblock.halfcredit_keyphrases = test_data['halfcredit']
         self.xblock.student_answer = test_data['student_answer']
         credit = Credit[test_data['credit']]
-        self.assertEquals(credit, self.xblock._determine_credit())
+        self.assertEqual(credit, self.xblock._determine_credit())
 
     @ddt.data(Credit.zero, Credit.half, Credit.full)
     def test_compute_score(self, credit):
@@ -335,7 +364,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         self.xblock.min_word_count = test_data['min_word_count']
         self.xblock.max_word_count = test_data['max_word_count']
         self.xblock.student_answer = test_data['student_answer']
-        self.assertEquals(test_data['result'], self.xblock._word_count_valid())
+        self.assertEqual(test_data['result'], self.xblock._word_count_valid())
 
     # Messages
     @ddt.data(
@@ -359,7 +388,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         """
         self.xblock.max_attempts = max_attempts
         self.xblock.count_attempts = count_attempts
-        self.assertEquals(
+        self.assertEqual(
             _(result),
             self.xblock._get_used_attempts_feedback(),
         )
@@ -385,7 +414,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         """
         self.xblock.min_word_count = min_word_count
         self.xblock.max_word_count = max_word_count
-        self.assertEquals(
+        self.assertEqual(
             _(result),
             self.xblock._get_word_count_message(),
         )
@@ -405,7 +434,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         self.xblock.count_attempts = test_data['count_attempts']
         self.xblock.min_word_count = test_data['min_word_count']
         self.xblock.max_word_count = test_data['max_word_count']
-        self.assertEquals(
+        self.assertEqual(
             _(str(test_data['result'])),
             self.xblock._get_user_alert(
                 ignore_attempts=test_data['ignore_attempts']
@@ -434,7 +463,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
             return_value=word_count_valid
         )
         self.xblock.submitted_message = 'test submission received message'
-        self.assertEquals(
+        self.assertEqual(
             _(result),
             self.xblock._get_submitted_message(),
         )
@@ -450,7 +479,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         """
         self.xblock.weight = test_data['weight']
         self.xblock.score = test_data['score']
-        self.assertEquals(
+        self.assertEqual(
             _(test_data['result']),
             self.xblock._get_problem_progress(),
         )
@@ -473,7 +502,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
             return_value=test_data['word_count_valid']
         )
         self.xblock._determine_credit = MagicMock(return_value=credit)
-        self.assertEquals(
+        self.assertEqual(
             test_data['result'],
             self.xblock._get_indicator_class()
         )
@@ -492,7 +521,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         hide correctness UI
         """
         self.xblock.display_correctness = display_correctness
-        self.assertEquals(
+        self.assertEqual(
             result,
             self.xblock._get_indicator_visibility_class(),
         )
@@ -508,7 +537,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         """
         self.xblock.max_attempts = test_data['max_attempts']
         self.xblock.count_attempts = test_data['count_attempts']
-        self.assertEquals(
+        self.assertEqual(
             test_data['result'],
             self.xblock._get_nodisplay_class()
         )
@@ -525,37 +554,37 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         response = self.xblock.submit(request)
         # Added for response json_body
         # pylint: disable=no-member
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['status'],
             'success'
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['problem_progress'],
             self.xblock._get_problem_progress()
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['indicator_class'],
             self.xblock._get_indicator_class()
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['used_attempts_feedback'],
             self.xblock._get_used_attempts_feedback()
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['nodisplay_class'],
             self.xblock._get_nodisplay_class()
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['submitted_message'],
             self.xblock._get_submitted_message()
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['user_alert'],
             self.xblock._get_user_alert(
                 ignore_attempts=True,
             )
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['visibility_class'],
             self.xblock._get_indicator_visibility_class()
         )
@@ -572,34 +601,34 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         response = self.xblock.save_reponse(request)
         # Added for response json_body
         # pylint: disable=no-member
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['status'],
             'success'
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['problem_progress'],
             self.xblock._get_problem_progress()
         )
         self.assertIsNone(
             response.json_body.get('indicator_class', None),
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['used_attempts_feedback'],
             self.xblock._get_used_attempts_feedback()
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['nodisplay_class'],
             self.xblock._get_nodisplay_class()
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['submitted_message'],
             ''
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['user_alert'],
             self.xblock.saved_message
         )
-        self.assertEquals(
+        self.assertEqual(
             response.json_body['visibility_class'],
             self.xblock._get_indicator_visibility_class()
         )

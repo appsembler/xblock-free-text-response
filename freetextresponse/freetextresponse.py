@@ -2,13 +2,8 @@
 This is the core logic for the Free-text Response XBlock
 """
 from enum import Enum
-import pkg_resources
 from django.db import IntegrityError
 from django.template.context import Context
-from django.template.loader import get_template
-from django.utils.translation import ungettext
-from django.utils.translation import ugettext_lazy as _
-from django.utils.translation import ugettext
 from xblock.core import XBlock
 from xblock.fields import Boolean
 from xblock.fields import Float
@@ -18,8 +13,11 @@ from xblock.fields import Scope
 from xblock.fields import String
 from xblock.fragment import Fragment
 from xblock.validation import ValidationMessage
+from xblockutils.resources import ResourceLoader
 from xblockutils.studio_editable import StudioEditableXBlockMixin
 from .mixins import EnforceDueDates, MissingDataFetcherMixin
+
+from .utils import _
 
 
 MAX_RESPONSES = 3
@@ -27,15 +25,18 @@ MAX_RESPONSES = 3
 
 @XBlock.needs("i18n")
 class FreeTextResponse(
-    EnforceDueDates,
-    MissingDataFetcherMixin,
-    StudioEditableXBlockMixin,
-    XBlock,
+        EnforceDueDates,
+        MissingDataFetcherMixin,
+        StudioEditableXBlockMixin,
+        XBlock,
 ):
     #  pylint: disable=too-many-ancestors, too-many-instance-attributes
     """
     Enables instructors to create questions with free-text responses.
     """
+
+    loader = ResourceLoader(__name__)
+
     @staticmethod
     def workbench_scenarios():
         """
@@ -173,7 +174,7 @@ class FreeTextResponse(
             'This is the prompt students will see when '
             'asked to enter their response'
         ),
-        default='Please enter your response within this text area',
+        default=_('Please enter your response within this text area'),
         scope=Scope.settings,
         multiline_editor=True,
     )
@@ -239,10 +240,15 @@ class FreeTextResponse(
         'saved_message',
     )
 
+    def ungettext(self, *args, **kwargs):
+        """
+        XBlock aware version of `ungettext`.
+        """
+        return self.runtime.service(self, 'i18n').ungettext(*args, **kwargs)
+
     def build_fragment(
             self,
-            template,
-            context_dict,
+            rendered_template,
             initialize_js_func,
             additional_css=[],
             additional_js=[],
@@ -251,8 +257,7 @@ class FreeTextResponse(
         """
         Creates a fragment for display.
         """
-        context = Context(context_dict)
-        fragment = Fragment(template.render(context))
+        fragment = Fragment(rendered_template)
         for item in additional_css:
             url = self.runtime.local_resource_url(self, item)
             fragment.add_css_url(url)
@@ -279,7 +284,7 @@ class FreeTextResponse(
             (Fragment): The HTML Fragment for this XBlock, which determines the
             general frame of the FreeTextResponse Question.
         """
-
+        display_other_responses = self.display_other_student_responses
         self.runtime.service(self, 'i18n')
         context.update(
             {
@@ -293,14 +298,17 @@ class FreeTextResponse(
                 'used_attempts_feedback': self._get_used_attempts_feedback(),
                 'visibility_class': self._get_indicator_visibility_class(),
                 'word_count_message': self._get_word_count_message(),
-                'display_other_responses': self.display_other_student_responses,
-                'other_responses': [],
+                'display_other_responses': display_other_responses,
+                'other_responses': self.get_other_answers(),
             }
         )
-        template = get_template('freetextresponse_view.html')
+        template = self.loader.render_django_template(
+            'templates/freetextresponse_view.html',
+            context=Context(context),
+            i18n_service=self.runtime.service(self, 'i18n'),
+        )
         fragment = self.build_fragment(
             template,
-            context,
             initialize_js_func='FreeTextResponseView',
             additional_css=[
                 'public/view.css',
@@ -321,15 +329,14 @@ class FreeTextResponse(
         """
         return self.weight
 
-    @classmethod
-    def _generate_validation_message(cls, msg):
+    def _generate_validation_message(self, msg):
         """
         Helper method to generate a ValidationMessage from
         the supplied string
         """
         result = ValidationMessage(
             ValidationMessage.ERROR,
-            ugettext(unicode(msg))
+            self.ugettext(unicode(msg))  # pylint: disable=undefined-variable
         )
         return result
 
@@ -338,27 +345,27 @@ class FreeTextResponse(
         Validates settings entered by the instructor.
         """
         if data.weight < 0:
-            msg = FreeTextResponse._generate_validation_message(
+            msg = self._generate_validation_message(
                 'Weight Attempts cannot be negative'
             )
             validation.add(msg)
         if data.max_attempts < 0:
-            msg = FreeTextResponse._generate_validation_message(
+            msg = self._generate_validation_message(
                 'Maximum Attempts cannot be negative'
             )
             validation.add(msg)
         if data.min_word_count < 1:
-            msg = FreeTextResponse._generate_validation_message(
+            msg = self._generate_validation_message(
                 'Minimum Word Count cannot be less than 1'
             )
             validation.add(msg)
         if data.min_word_count > data.max_word_count:
-            msg = FreeTextResponse._generate_validation_message(
+            msg = self._generate_validation_message(
                 'Minimum Word Count cannot be greater than Max Word Count'
             )
             validation.add(msg)
         if not data.submitted_message:
-            msg = FreeTextResponse._generate_validation_message(
+            msg = self._generate_validation_message(
                 'Submission Received Message cannot be blank'
             )
             validation.add(msg)
@@ -377,7 +384,7 @@ class FreeTextResponse(
         """
         Returns the word count message
         """
-        result = ungettext(
+        result = self.ungettext(
             "Your response must be "
             "between {min} and {max} word.",
             "Your response must be "
@@ -399,7 +406,7 @@ class FreeTextResponse(
                 (not self._word_count_valid())
         ):
             word_count_message = self._get_word_count_message()
-            result = ugettext(
+            result = self.ugettext(
                 "Invalid Word Count. {word_count_message}"
             ).format(
                 word_count_message=word_count_message,
@@ -424,11 +431,7 @@ class FreeTextResponse(
         word count of the user's answer is valid
         """
         word_count = len(self.student_answer.split())
-        result = (
-            word_count <= self.max_word_count and
-            word_count >= self.min_word_count
-        )
-        return result
+        return self.max_word_count >= word_count >= self.min_word_count
 
     @classmethod
     def _is_at_least_one_phrase_present(cls, phrases, answer):
@@ -452,7 +455,7 @@ class FreeTextResponse(
             result = ''
         elif self.score == 0.0:
             result = "({})".format(
-                ungettext(
+                self.ungettext(
                     "{weight} point possible",
                     "{weight} points possible",
                     self.weight,
@@ -465,7 +468,7 @@ class FreeTextResponse(
             # No trailing zero and no scientific notation
             score_string = ('%.15f' % scaled_score).rstrip('0').rstrip('.')
             result = "({})".format(
-                ungettext(
+                self.ungettext(
                     "{score_string}/{weight} point",
                     "{score_string}/{weight} points",
                     self.weight,
@@ -529,7 +532,7 @@ class FreeTextResponse(
         """
         result = ''
         if self.max_attempts > 0:
-            result = ungettext(
+            result = self.ungettext(
                 'You have used {count_attempts} of {max_attempts} submission',
                 'You have used {count_attempts} of {max_attempts} submissions',
                 self.max_attempts,
@@ -590,7 +593,8 @@ class FreeTextResponse(
             # even if word count is invalid.
             self.count_attempts += 1
             self._compute_score()
-            if self.display_other_student_responses and data.get('can_record_response'):
+            display_other_responses = self.display_other_student_responses
+            if display_other_responses and data.get('can_record_response'):
                 self.store_student_response()
         result = {
             'status': 'success',
@@ -602,7 +606,7 @@ class FreeTextResponse(
             'user_alert': self._get_user_alert(
                 ignore_attempts=True,
             ),
-            'other_responses': self.get_other_answers(self.get_student_id()),
+            'other_responses': self.get_other_answers(),
             'display_other_responses': self.display_other_student_responses,
             'visibility_class': self._get_indicator_visibility_class(),
         }
@@ -652,14 +656,21 @@ class FreeTextResponse(
 
         # Want to store extra response so student can still see
         # MAX_RESPONSES answers if their answer is in the pool.
-        self.displayable_answers = self.displayable_answers[-(MAX_RESPONSES+1):]
+        response_index = -(MAX_RESPONSES+1)
+        self.displayable_answers = self.displayable_answers[response_index:]
 
-    def get_other_answers(self, student_id):
+    def get_other_answers(self):
         """
         Returns at most MAX_RESPONSES answers from the pool.
 
         Does not return answers the student had submitted.
         """
+        student_id = self.get_student_id()
+        display_other_responses = self.display_other_student_responses
+        shouldnt_show_other_responses = not display_other_responses
+        student_answer_incorrect = self._determine_credit() == Credit.zero
+        if student_answer_incorrect or shouldnt_show_other_responses:
+            return []
         return_list = [
             response
             for response in self.displayable_answers

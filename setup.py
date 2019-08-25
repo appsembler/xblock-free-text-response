@@ -27,28 +27,27 @@ class Tox(TestCommand):
 
 setup(
     name="xblock-free-text-response",
-    version="0.2.0",
+    version="0.4.0",
     description="Enables instructors to create questions with free-text responses.",
     license='AGPL-3.0',
     packages=[
         'freetextresponse',
     ],
     install_requires=[
-        'django',
-        'django_nose',
-        'mock',
         'coverage',
+        'ddt',
+        'django<2.0',
+        'django_nose',
+        'edx-opaque-keys',
+        'enum34',
+        'mock',
         'mako',
         'XBlock',
         'xblock-utils',
-        'enum34',
-    ],
-    dependency_links=[
-        'https://github.com/edx/xblock-utils/tarball/c39bf653e4f27fb3798662ef64cde99f57603f79#egg=xblock-utils',
     ],
     entry_points={
         'xblock.v1': [
-            'freetextresponse = freetextresponse:FreeTextResponse',
+            'freetextresponse = freetextresponse.freetextresponse:FreeTextResponse',
         ],
     },
     package_dir={
@@ -57,6 +56,8 @@ setup(
     package_data={
         "freetextresponse": [
             'public/*',
+            'templates/*',
+            'translations/*',
         ],
     },
     classifiers=[

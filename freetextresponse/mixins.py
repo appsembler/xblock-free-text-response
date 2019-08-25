@@ -1,10 +1,11 @@
 """
 Mixins for the Free Text Response XBlock
 """
+# pylint: disable=too-few-public-methods
 import datetime
 
 
-class EnforceDueDates(object):  # pylint: disable=too-few-public-methods
+class EnforceDueDates(object):  # pylint: disable=R
     """
     xBlock Mixin to allow xblocks to check the due date
     (taking the graceperiod into account) of the
@@ -33,7 +34,7 @@ class EnforceDueDates(object):  # pylint: disable=too-few-public-methods
         return False
 
 
-class MissingDataFetcherMixin(object):
+class MissingDataFetcherMixin(object):  # pylint: disable=R
     """
     The mixin used for getting the student_id of the current user.
     """
@@ -46,5 +47,5 @@ class MissingDataFetcherMixin(object):
             # pylint:disable=E1101
         else:
             student_id = self.scope_ids.user_id or ''
-            student_id = unicode(student_id)
+            student_id = unicode(student_id)  # noqa pylint: disable=undefined-variable
         return student_id
