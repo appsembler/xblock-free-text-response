@@ -25,7 +25,7 @@ def make_xblock(xblock_name, xblock_cls, attributes):
         html_id=Mock(return_value='sample_element_id'),
     )
     xblock.runtime = runtime
-    xblock.course_id = 'course-v1:edX+DemoX+Demo_Course'
+    xblock.course_id = 'course-v1:foo+bar+baz'
     for key, value in attributes.items():
         setattr(xblock, key, value)
     return xblock

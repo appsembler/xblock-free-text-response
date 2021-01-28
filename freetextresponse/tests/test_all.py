@@ -1,25 +1,23 @@
 """
 Module To Test FreeTextResponse XBlock
 """
+from os import path
 import json
 import unittest
+
 import ddt
-
-from mock import MagicMock, Mock
-
-from opaque_keys.edx.locations import SlashSeparatedCourseKey
-
-from xblock.field_data import DictFieldData
+from mock import MagicMock
 from xblock.validation import ValidationMessage
-from xblockutils.resources import ResourceLoader
-
 from django.db import IntegrityError
 
 from freetextresponse.models import Credit
-from freetextresponse.views import _is_at_least_one_phrase_present
+from freetextresponse.views import _is_at_least_one_phrase_present  # noqa
+from freetextresponse.utils import _
 from freetextresponse.xblocks import FreeTextResponse
 
-from freetextresponse.utils import _
+from .tests_utils import make_xblock
+
+tests_dir = path.dirname(__file__)
 
 
 class TestData(object):
@@ -51,36 +49,17 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
     A complete suite of unit tests for the Free-text Response XBlock
     """
 
-    @classmethod
-    def make_an_xblock(cls, **kw):
-        """
-        Helper method that creates a Free-text Response XBlock
-        """
-        course_id = SlashSeparatedCourseKey('foo', 'bar', 'baz')
-        runtime = Mock(
-            course_id=course_id,
-            service=Mock(
-                # Is there a cleaner mock to the `i18n` service?
-                return_value=Mock(_catalog={}),
-            ),
-        )
-        scope_ids = Mock()
-        field_data = DictFieldData(kw)
-        xblock = FreeTextResponse(runtime, field_data, scope_ids)
-        xblock.xmodule_runtime = runtime
-        return xblock
-
     def setUp(self):
         """
         Creates an xblock
         """
-        self.xblock = FreetextResponseXblockTestCase.make_an_xblock()
+        self.xblock = make_xblock('freetextresponse', FreeTextResponse, {})
 
     def test_workbench_scenarios(self):
         """
         Checks workbench scenarios title and basic scenario
         """
-        result_title = 'Free-text Response XBlock'
+        result_title = 'Free Text Response Single'
         basic_scenario = "<freetextresponse />"
         test_result = self.xblock.workbench_scenarios()
         self.assertEqual(result_title, test_result[0][0])
@@ -106,7 +85,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
             test_result.text,
         )
 
-    @ddt.file_data('./tests/validate_field_data.json')
+    @ddt.file_data(path.join(tests_dir, 'validate_field_data.json'))
     def test_validate_field_data(self, **test_dict):
         """
         Checks classmethod validate_field_data
@@ -189,13 +168,9 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         context = {
             'prompt': studio_settings_prompt,
         }
-        loader = ResourceLoader('freetextresponse')
-        template = loader.render_django_template(
-            'templates/freetextresponse_view.html',
-            context=context,
-        )
         fragment = self.xblock.build_fragment(
-            template,
+            template='view.html',
+            context=context,
             js_init='FreeTextResponseView',
             css=[],
             js=[],
@@ -237,7 +212,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         self.assertIn(str(self.xblock.submitted_message), studio_view_html)
 
     # Scoring
-    @ddt.file_data('./tests/determine_credit.json')
+    @ddt.file_data(path.join(tests_dir, 'determine_credit.json'))
     def test_determine_credit(self, **test_data):
         # pylint: disable=protected-access
         """
@@ -333,7 +308,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
             ),
         )
 
-    @ddt.file_data('./tests/word_count_valid.json')
+    @ddt.file_data(path.join(tests_dir, 'word_count_valid.json'))
     def test_word_count_valid(self, **test_data):
         # pylint: disable=protected-access
         """
@@ -401,7 +376,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         )
 
     # Tested from get_user_alert
-    @ddt.file_data('./tests/invalid_word_count_message.json')
+    @ddt.file_data(path.join(tests_dir, 'invalid_word_count_message.json'))
     def test_get_user_alert(self, **test_data):
         # pylint: disable=protected-access
         """
@@ -449,7 +424,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
             self.xblock._get_submitted_message(),
         )
 
-    @ddt.file_data('./tests/problem_progress.json')
+    @ddt.file_data(path.join(tests_dir, 'problem_progress.json'))
     def test_get_problem_progress(self, **test_data):
         # pylint: disable=protected-access
         """
@@ -466,7 +441,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         )
 
     # CSS Classes
-    @ddt.file_data('./tests/indicator_class.json')
+    @ddt.file_data(path.join(tests_dir, 'indicator_class.json'))
     def test_get_indicator_class(self, **test_data):
         # pylint: disable=protected-access
         """
@@ -507,7 +482,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
             self.xblock._get_indicator_visibility_class(),
         )
 
-    @ddt.file_data('./tests/submitdisplay_class.json')
+    @ddt.file_data(path.join(tests_dir, 'submitdisplay_class.json'))
     def test_get_submitdisplay_class(self, **test_data):
         # pylint: disable=protected-access
         """
@@ -531,7 +506,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         data = json.dumps({'student_answer': 'asdf'})
         request = TestRequest()
         request.method = 'POST'
-        request.body = data
+        request.body = data.encode('utf-8')
         response = self.xblock.submit(request)
         # Added for response json_body
         # pylint: disable=no-member
@@ -578,7 +553,7 @@ class FreetextResponseXblockTestCase(unittest.TestCase):
         data = json.dumps({'student_answer': 'asdf'})
         request = TestRequest()
         request.method = 'POST'
-        request.body = data
+        request.body = data.encode('utf-8')
         response = self.xblock.save_reponse(request)
         # Added for response json_body
         # pylint: disable=no-member

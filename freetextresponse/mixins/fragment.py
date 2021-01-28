@@ -82,7 +82,6 @@ class XBlockFragmentBuilderMixin(object):
             else:
                 item = '../public/' + item
                 data = pkg_resources.resource_string(__name__, item)
-                data = data.decode('utf8')
                 fragment.add_css(data)
         for item in js:
             item = 'public/' + item
